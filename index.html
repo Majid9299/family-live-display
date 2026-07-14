@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عرضة العائلة</title>
+<style>
+  :root{
+    --ink: #f4efe2;
+    --ink-dim: #d9d2bd;
+    --gold: #e3b658;
+    --gold-soft: rgba(227,182,88,0.35);
+    --panel: rgba(20, 28, 20, 0.42);
+    --panel-strong: rgba(14, 20, 14, 0.62);
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; height:100%; width:100%;
+    overflow:hidden;
+    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+    color: var(--ink);
+    background:#101a12;
+  }
+
+  .bg-layer{
+    position:fixed; inset:0;
+    background-size: cover;
+    background-position: center;
+    opacity:0;
+    transition: opacity 2.5s ease;
+    filter: saturate(0.95) brightness(0.9);
+  }
+  .bg-layer.active{ opacity:1; }
+  .bg-scrim{
+    position:fixed; inset:0;
+    background:
+      linear-gradient(180deg, rgba(8,14,8,0.55) 0%, rgba(8,14,8,0.12) 22%, rgba(8,14,8,0.10) 62%, rgba(6,10,6,0.72) 100%);
+    pointer-events:none;
+  }
+
+  .stage{
+    position:relative;
+    height:100%;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+  }
+
+  header{
+    text-align:center;
+    padding: 22px 16px 10px;
+  }
+  header h1{
+    margin:0;
+    font-size: clamp(22px, 4vw, 40px);
+    letter-spacing: 1px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  }
+  header .sub{
+    margin-top:6px;
+    font-size: 14px;
+    color: var(--ink-dim);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+
+  .chart-zone{
+    position:relative;
+    flex:1;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    gap: clamp(10px, 2.4vw, 34px);
+    padding: 0 5vw 0;
+    overflow-x:auto;
+    overflow-y:hidden;
+  }
+  .ground{
+    position:absolute;
+    left:0; right:0; bottom:64px;
+    height:1px;
+    background: linear-gradient(90deg, transparent, var(--gold-soft) 15%, var(--gold-soft) 85%, transparent);
+  }
+
+  .col{
+    position:relative;
+    width: clamp(80px, 9vw, 130px);
+    height: 100%;
+    flex: 0 0 auto;
+  }
+  .riser{
+    position:absolute;
+    bottom:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:2px;
+    height:0;
+    background: linear-gradient(180deg, var(--gold), rgba(227,182,88,0.05));
+    border-radius: 2px;
+    transition: height 1.4s cubic-bezier(.22,.9,.3,1);
+  }
+  .badge{
+    position:absolute;
+    bottom:0;
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    transition: bottom 1.4s cubic-bezier(.22,.9,.3,1);
+  }
+  .photo-wrap{
+    position:relative;
+    width: clamp(64px, 7.4vw, 104px);
+    height: clamp(64px, 7.4vw, 104px);
+  }
+  .photo{
+    width:100%; height:100%;
+    border-radius:50%;
+    object-fit:cover;
+    border: 3px solid var(--gold);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    background:#26331f;
+    display:block;
+  }
+  .score-pill{
+    position:absolute;
+    bottom:-6px;
+    left:50%;
+    transform:translateX(-50%);
+    background: var(--panel-strong);
+    border: 1px solid var(--gold-soft);
+    color: var(--gold);
+    font-weight:bold;
+    font-size: 13px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    backdrop-filter: blur(2px);
+  }
+  .name{
+    margin-top:12px;
+    font-size: clamp(12px, 1.3vw, 16px);
+    text-align:center;
+    background: var(--panel);
+    padding: 3px 10px;
+    border-radius: 999px;
+    max-width: 130px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+
+  .empty{
+    margin:auto;
+    text-align:center;
+    background: var(--panel);
+    padding: 28px 34px;
+    border-radius: 18px;
+    max-width: 420px;
+  }
+  .empty p{ margin:6px 0; color:var(--ink-dim); font-size:15px; }
+
+  .admin-link{
+    position:fixed;
+    bottom:14px;
+    left:14px;
+    width:34px; height:34px;
+    border-radius:50%;
+    background: var(--panel);
+    display:flex; align-items:center; justify-content:center;
+    text-decoration:none;
+    color: var(--ink-dim);
+    font-size:16px;
+    opacity:0.45;
+    transition: opacity .2s;
+  }
+  .admin-link:hover{ opacity:1; }
+</style>
+</head>
+<body>
+
+  <div id="bgA" class="bg-layer active"></div>
+  <div id="bgB" class="bg-layer"></div>
+  <div class="bg-scrim"></div>
+
+  <div class="stage">
+    <header>
+      <h1>عرضة العائلة</h1>
+      <div class="sub">تقييمك يرفعك… فاجتهد</div>
+    </header>
+
+    <div class="chart-zone" id="chartZone">
+      <div class="ground"></div>
+      <!-- الأعمدة تُبنى بالجافاسكربت -->
+    </div>
+  </div>
+
+  <a class="admin-link" href="admin.html" title="لوحة الإدمن">⚙</a>
+
+<script src="data.js"></script>
+<script>
+  // ---------- تدوير الخلفيات كل ٣٠ ثانية ----------
+  const layers = [document.getElementById('bgA'), document.getElementById('bgB')];
+  let activeLayer = 0;
+  let bgOrder = [...BACKGROUNDS];
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  let bgIndex = 0;
+  bgOrder = shuffle(bgOrder);
+  layers[0].style.backgroundImage = `url("${bgOrder[0]}")`;
+
+  function nextBackground(){
+    bgIndex = (bgIndex + 1) % bgOrder.length;
+    if (bgIndex === 0) bgOrder = shuffle(bgOrder);
+    const showLayer = layers[(activeLayer + 1) % 2];
+    const hideLayer = layers[activeLayer];
+    showLayer.style.backgroundImage = `url("${bgOrder[bgIndex]}")`;
+    showLayer.classList.add('active');
+    hideLayer.classList.remove('active');
+    activeLayer = (activeLayer + 1) % 2;
+  }
+  setInterval(nextBackground, 30000);
+
+  // ---------- رسم الأفراد (ترتيب ثابت حسب الإضافة؛ يتحرك فقط الارتفاع حسب التقييم) ----------
+  const zone = document.getElementById('chartZone');
+  const emptyNote = document.createElement('div');
+  emptyNote.className = 'empty';
+  emptyNote.innerHTML = `<p style="font-size:20px;color:var(--ink)">لا يوجد أفراد بعد</p>
+    <p>أضف أفراد العائلة من لوحة الإدمن (زر الترس أسفل يسار الشاشة)</p>`;
+
+  const colsById = new Map(); // id -> {col, riser, img, name, scorePill}
+  let lastIds = '';
+
+  function positionPercent(score){
+    // نطاق العرض من 6% إلى 84% من ارتفاع منطقة العرض
+    return 6 + (clampScore(score) / 50) * 78;
+  }
+
+  function buildColumn(m){
+    const col = document.createElement('div');
+    col.className = 'col';
+
+    const riser = document.createElement('div');
+    riser.className = 'riser';
+
+    const badge = document.createElement('div');
+    badge.className = 'badge';
+    badge.innerHTML = `
+      <div class="photo-wrap">
+        <img class="photo" alt="">
+        <div class="score-pill"></div>
+      </div>
+      <div class="name"></div>
+    `;
+
+    col.appendChild(riser);
+    col.appendChild(badge);
+
+    return {
+      col, riser, badge,
+      img: badge.querySelector('.photo'),
+      scorePill: badge.querySelector('.score-pill'),
+      nameEl: badge.querySelector('.name')
+    };
+  }
+
+  function updateColumn(entry, m){
+    if (entry.img.src !== m.photo) entry.img.src = m.photo || '';
+    entry.img.alt = m.name;
+    entry.scorePill.textContent = clampScore(m.score);
+    entry.nameEl.textContent = m.name;
+    const pct = positionPercent(m.score) + '%';
+    entry.riser.style.height = pct;
+    entry.badge.style.bottom = pct;
+  }
+
+  function render(){
+    const data = loadData();
+
+    if (!data.members.length){
+      colsById.forEach(entry => entry.col.remove());
+      colsById.clear();
+      lastIds = '';
+      if (!emptyNote.isConnected) zone.appendChild(emptyNote);
+      return;
+    }
+    if (emptyNote.isConnected) emptyNote.remove();
+
+    const ids = data.members.map(m => m.id).join(',');
+    if (ids !== lastIds){
+      // إزالة الأعمدة المحذوفة
+      colsById.forEach((entry, id) => {
+        if (!data.members.some(m => m.id === id)){
+          entry.col.remove();
+          colsById.delete(id);
+        }
+      });
+      // إضافة الأعمدة الجديدة بترتيب الإضافة
+      data.members.forEach(m => {
+        if (!colsById.has(m.id)){
+          const entry = buildColumn(m);
+          colsById.set(m.id, entry);
+          zone.appendChild(entry.col);
+        }
+      });
+      lastIds = ids;
+    }
+
+    data.members.forEach(m => updateColumn(colsById.get(m.id), m));
+  }
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  render();
+  setInterval(render, 2000); // يلتقط أي تعديل يحصل من لوحة الإدمن (نفس الجهاز)
+  window.addEventListener('storage', render);
+</script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الإدمن — عرضة العائلة</title>
+<style>
+  :root{
+    --bg: #12190f;
+    --panel: #1c2618;
+    --panel-2: #223022;
+    --line: #33422f;
+    --ink: #f2eee0;
+    --ink-dim: #b9b6a2;
+    --gold: #e3b658;
+    --danger: #d16158;
+    --good: #6fae6a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; min-height:100%;
+    background: radial-gradient(circle at 20% 0%, #1a2417, var(--bg));
+    color: var(--ink);
+    font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+  }
+  .wrap{ max-width: 820px; margin: 0 auto; padding: 28px 18px 80px; }
+  h1{ font-size: 22px; text-align:center; margin: 6px 0 26px; }
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .card h2{ margin:0 0 14px; font-size:16px; color: var(--gold); }
+  label{ display:block; font-size:13px; color:var(--ink-dim); margin-bottom:6px; }
+  input[type=text], input[type=password], input[type=number]{
+    width:100%;
+    background: var(--panel-2);
+    border:1px solid var(--line);
+    color: var(--ink);
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:14px;
+    font-family:inherit;
+  }
+  input[type=file]{ color: var(--ink-dim); font-size:13px; }
+  input[type=range]{ width:100%; accent-color: var(--gold); }
+  .row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div{ flex:1; min-width:160px; }
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:14px;
+    font-family:inherit;
+    font-weight:bold;
+  }
+  .btn-primary{ background: var(--gold); color:#26210a; }
+  .btn-danger{ background: transparent; color: var(--danger); border:1px solid var(--danger); }
+  .btn-ghost{ background: transparent; color: var(--ink-dim); border:1px solid var(--line); }
+  .btn-primary:hover{ filter:brightness(1.08); }
+
+  #pinScreen{
+    max-width: 340px;
+    margin: 18vh auto 0;
+    text-align:center;
+  }
+  #pinScreen .card{ text-align:right; }
+  #pinError{ color: var(--danger); font-size:13px; min-height:18px; margin-top:8px; }
+  #pinHint{ color: var(--ink-dim); font-size:12px; margin-top:10px; }
+
+  .member{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:12px 0;
+    border-top:1px solid var(--line);
+  }
+  .member:first-child{ border-top:none; }
+  .thumb-btn{
+    position:relative;
+    width:64px; height:64px;
+    border-radius:50%;
+    flex:0 0 auto;
+    cursor:pointer;
+    border:2px solid var(--gold);
+    overflow:hidden;
+    background:#26331f;
+  }
+  .thumb-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb-btn input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .member .fields{ flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .member .score-row{ display:flex; align-items:center; gap:10px; }
+  .member .score-row span{ font-size:13px; color:var(--gold); min-width:26px; text-align:center; }
+  .member .actions{ flex:0 0 auto; }
+
+  .add-preview{
+    width:64px; height:64px;
+    border-radius:50%;
+    border:2px dashed var(--line);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    background:#1a2317;
+    color:var(--ink-dim);
+    font-size:11px;
+    flex:0 0 auto;
+  }
+  .add-preview img{ width:100%; height:100%; object-fit:cover; }
+
+  .toast{
+    position:fixed;
+    bottom:20px; left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--good);
+    color:#0e1a0d;
+    font-weight:bold;
+    padding:8px 18px;
+    border-radius:999px;
+    font-size:13px;
+    opacity:0;
+    transition: opacity .25s, transform .25s;
+    pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .top-actions{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .top-actions a{ color: var(--ink-dim); font-size:13px; text-decoration:none; border:1px solid var(--line); padding:7px 12px; border-radius:8px; }
+  .empty-note{ color:var(--ink-dim); font-size:13px; text-align:center; padding:10px 0; }
+</style>
+</head>
+<body>
+
+<div id="pinScreen">
+  <h1 style="margin-bottom:16px;">لوحة الإدمن 🔒</h1>
+  <div class="card">
+    <label for="pinInput">أدخل الرقم السري</label>
+    <input type="password" id="pinInput" inputmode="numeric" autocomplete="off" maxlength="12">
+    <div id="pinError"></div>
+    <button class="btn-primary" style="width:100%; margin-top:10px;" onclick="tryUnlock()">دخول</button>
+    <div id="pinHint"></div>
+  </div>
+</div>
+
+<div class="wrap" id="mainScreen" style="display:none;">
+  <div class="top-actions">
+    <a href="index.html" target="_blank">↩ فتح واجهة العرض</a>
+    <a href="#" onclick="lock(); return false;">قفل الخروج</a>
+  </div>
+  <h1>لوحة إدمن — عرضة العائلة</h1>
+
+  <div class="card">
+    <h2>إضافة فرد جديد</h2>
+    <div class="row" style="align-items:flex-end;">
+      <div class="add-preview" id="addPreview">صورة</div>
+      <div>
+        <label for="newName">الاسم</label>
+        <input type="text" id="newName" placeholder="اسم الفرد">
+      </div>
+      <div>
+        <label for="newPhoto">الصورة</label>
+        <input type="file" id="newPhoto" accept="image/*">
+      </div>
+      <div style="flex:0 0 auto;">
+        <button class="btn-primary" onclick="addMember()">إضافة</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>الأفراد</h2>
+    <div id="membersList"></div>
+    <div class="empty-note" id="membersEmpty" style="display:none;">لا يوجد أفراد بعد — أضف أول فرد من الأعلى</div>
+  </div>
+
+  <div class="card">
+    <h2>تغيير الرقم السري</h2>
+    <div class="row">
+      <div>
+        <label for="oldPin">الرقم الحالي</label>
+        <input type="password" id="oldPin" inputmode="numeric">
+      </div>
+      <div>
+        <label for="newPin1">الرقم الجديد</label>
+        <input type="password" id="newPin1" inputmode="numeric">
+      </div>
+      <div>
+        <label for="newPin2">تأكيد الرقم الجديد</label>
+        <input type="password" id="newPin2" inputmode="numeric">
+      </div>
+    </div>
+    <div id="pinChangeMsg" style="min-height:18px; font-size:13px; margin-top:8px;"></div>
+    <button class="btn-primary" style="margin-top:6px;" onclick="changePin()">تحديث الرقم السري</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">تم الحفظ</div>
+
+<script src="data.js"></script>
+<script>
+  let addPhotoDataUrl = null;
+
+  // ---------- قفل / فتح ----------
+  function tryUnlock(){
+    const data = loadData();
+    const val = document.getElementById('pinInput').value.trim();
+    if (val === data.pin){
+      sessionStorage.setItem('admin_unlocked', '1');
+      showMain();
+    } else {
+      document.getElementById('pinError').textContent = 'رقم سري غير صحيح';
+    }
+  }
+  function lock(){
+    sessionStorage.removeItem('admin_unlocked');
+    location.reload();
+  }
+  function showMain(){
+    document.getElementById('pinScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    renderMembers();
+  }
+
+  document.getElementById('pinInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryUnlock();
+  });
+
+  (function init(){
+    const data = loadData();
+    if (data.pin === '0000'){
+      document.getElementById('pinHint').textContent = 'الرقم السري الافتراضي هو 0000 — يفضّل تغييره من الأسفل بعد الدخول';
+    }
+    if (sessionStorage.getItem('admin_unlocked') === '1'){
+      showMain();
+    }
+  })();
+
+  // ---------- Toast ----------
+  let toastTimer = null;
+  function toast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg || 'تم الحفظ';
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+
+  // ---------- إضافة فرد ----------
+  document.getElementById('newPhoto').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    addPhotoDataUrl = await compressImageFile(file);
+    document.getElementById('addPreview').innerHTML = `<img src="${addPhotoDataUrl}">`;
+  });
+
+  async function addMember(){
+    const name = document.getElementById('newName').value.trim();
+    if (!name){ alert('اكتب اسم الفرد أولاً'); return; }
+    if (!addPhotoDataUrl){ alert('اختر صورة للفرد أولاً'); return; }
+
+    const data = loadData();
+    data.members.push({ id: uid(), name, score: 0, photo: addPhotoDataUrl });
+    saveData(data);
+
+    document.getElementById('newName').value = '';
+    document.getElementById('newPhoto').value = '';
+    document.getElementById('addPreview').innerHTML = 'صورة';
+    addPhotoDataUrl = null;
+
+    renderMembers();
+    toast('تمت إضافة الفرد');
+  }
+
+  // ---------- عرض/تعديل الأفراد ----------
+  function renderMembers(){
+    const data = loadData();
+    const list = document.getElementById('membersList');
+    const empty = document.getElementById('membersEmpty');
+    list.innerHTML = '';
+
+    if (!data.members.length){
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    data.members.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'member';
+      row.innerHTML = `
+        <label class="thumb-btn" title="تغيير الصورة">
+          <img src="${m.photo || ''}">
+          <input type="file" accept="image/*" data-id="${m.id}" class="photo-input">
+        </label>
+        <div class="fields">
+          <input type="text" class="name-input" data-id="${m.id}" value="${escapeAttr(m.name)}">
+          <div class="score-row">
+            <input type="range" min="0" max="50" class="score-range" data-id="${m.id}" value="${m.score}">
+            <span class="score-val">${m.score}</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-danger" data-id="${m.id}" onclick="removeMember('${m.id}')">حذف</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('.name-input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        updateMember(inp.dataset.id, { name: inp.value.trim() || 'بدون اسم' });
+        toast('تم الحفظ');
+      });
+    });
+    list.querySelectorAll('.score-range').forEach(inp => {
+      const span = inp.parentElement.querySelector('.score-val');
+      inp.addEventListener('input', () => { span.textContent = inp.value; });
+      inp.addEventListener('change', () => {
+        updateMember(inp.dataset.id, { score: clampScore(inp.value) });
+        toast('تم الحفظ');
+      });
+    });
+    list.querySelectorAll('.photo-input').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        const file = inp.files[0];
+        if (!file) return;
+        const dataUrl = await compressImageFile(file);
+        updateMember(inp.dataset.id, { photo: dataUrl });
+        renderMembers();
+        toast('تم تحديث الصورة');
+      });
+    });
+  }
+
+  function updateMember(id, patch){
+    const data = loadData();
+    const m = data.members.find(x => x.id === id);
+    if (!m) return;
+    Object.assign(m, patch);
+    saveData(data);
+  }
+
+  function removeMember(id){
+    const data = loadData();
+    const m = data.members.find(x => x.id === id);
+    if (!m) return;
+    if (!confirm(`حذف "${m.name}" نهائيًا؟`)) return;
+    data.members = data.members.filter(x => x.id !== id);
+    saveData(data);
+    renderMembers();
+    toast('تم الحذف');
+  }
+
+  // ---------- تغيير الرقم السري ----------
+  function changePin(){
+    const data = loadData();
+    const oldPin = document.getElementById('oldPin').value.trim();
+    const p1 = document.getElementById('newPin1').value.trim();
+    const p2 = document.getElementById('newPin2').value.trim();
+    const msg = document.getElementById('pinChangeMsg');
+
+    if (oldPin !== data.pin){ msg.style.color = 'var(--danger)'; msg.textContent = 'الرقم الحالي غير صحيح'; return; }
+    if (!p1 || p1.length < 4){ msg.style.color = 'var(--danger)'; msg.textContent = 'الرقم الجديد يجب أن يكون 4 أرقام على الأقل'; return; }
+    if (p1 !== p2){ msg.style.color = 'var(--danger)'; msg.textContent = 'الرقمان الجديدان غير متطابقين'; return; }
+
+    data.pin = p1;
+    saveData(data);
+    msg.style.color = 'var(--good)';
+    msg.textContent = 'تم تحديث الرقم السري بنجاح';
+    document.getElementById('oldPin').value = '';
+    document.getElementById('newPin1').value = '';
+    document.getElementById('newPin2').value = '';
+    document.getElementById('pinHint').textContent = '';
+    toast('تم تحديث الرقم السري');
+  }
+
+  function escapeAttr(s){
+    return String(s ?? '').replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
