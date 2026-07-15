@@ -1,4 +1,11 @@
 {
   "pin": "0000",
-  "members": []
+  "members": [
+    {
+      "id": "m_test",
+      "name": "??????",
+      "score": 20,
+      "photo": ""
+    }
+  ]
 }
