@@ -1,11 +1,4 @@
 {
   "pin": "0000",
-  "members": [
-    {
-      "id": "m_test2",
-      "name": "خلفان",
-      "score": 33,
-      "photo": ""
-    }
-  ]
+  "members": []
 }
