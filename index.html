@@ -281,8 +281,16 @@
     entry.badge.style.bottom = pct;
   }
 
-  function render(){
-    const data = loadData();
+  let renderInFlight = false;
+  async function render(){
+    if (renderInFlight) return; // يمنع تراكم الطلبات لو الشبكة بطيئة
+    renderInFlight = true;
+    let data;
+    try {
+      data = await loadData();
+    } finally {
+      renderInFlight = false;
+    }
 
     if (!data.members.length){
       colsById.forEach(entry => entry.col.remove());
@@ -321,7 +329,7 @@
   }
 
   render();
-  setInterval(render, 2000); // يلتقط أي تعديل يحصل من لوحة الإدمن (نفس الجهاز)
+  setInterval(render, IS_LOCAL ? 2000 : 4000); // يلتقط أي تعديل يحصل من لوحة الإدمن
   window.addEventListener('storage', render);
 </script>
 </body>

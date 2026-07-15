@@ -1,5 +1,12 @@
-// طبقة تخزين مشتركة بين واجهة العرض ولوحة الإدمن (localStorage فقط، بدون إنترنت)
+// طبقة تخزين مشتركة بين واجهة العرض ولوحة الإدمن.
+// - على الجهاز/الفلاش (file://): تخزين محلي بالكامل عبر localStorage، بدون إنترنت.
+// - على النسخة اللايف (GitHub Pages): البيانات تُقرأ وتُحفظ فعليًا داخل مستودع GitHub
+//   عبر خدمة صغيرة (Cloudflare Worker)، حتى لا تضيع لو المتصفح مسح بياناته.
 const STORAGE_KEY = 'family_live_display_v1';
+const CACHE_KEY = 'family_live_display_v1_cache'; // نسخة احتياطية محلية من آخر بيانات ناجحة (وضع اللايف فقط)
+const API_BASE = 'https://family-live-display-api.majid9299.workers.dev';
+const IS_LOCAL = location.protocol === 'file:';
+
 const BACKGROUNDS = [
   'assets/backgrounds/bg1.jpg',
   'assets/backgrounds/bg2.jpg',
@@ -12,22 +19,54 @@ function defaultData() {
   return { pin: '0000', members: [] };
 }
 
-function loadData() {
+function normalize(parsed) {
+  if (!parsed || typeof parsed !== 'object') return defaultData();
+  if (!Array.isArray(parsed.members)) parsed.members = [];
+  if (!parsed.pin) parsed.pin = '0000';
+  return parsed;
+}
+
+function loadLocalData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultData();
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return defaultData();
-    if (!Array.isArray(parsed.members)) parsed.members = [];
-    if (!parsed.pin) parsed.pin = '0000';
-    return parsed;
+    return normalize(JSON.parse(raw));
   } catch (e) {
     return defaultData();
   }
 }
 
-function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+// يقرأ البيانات: محليًا فورًا، أو من اللايف عبر الشبكة (مع نسخة احتياطية محلية عند انقطاع الشبكة)
+async function loadData() {
+  if (IS_LOCAL) return loadLocalData();
+
+  try {
+    const res = await fetch(`${API_BASE}/data?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('تعذّرت قراءة البيانات');
+    const data = normalize(await res.json());
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    return data;
+  } catch (e) {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? normalize(JSON.parse(raw)) : defaultData();
+  }
+}
+
+// يحفظ البيانات: محليًا فورًا، أو على اللايف (يتطلب الرقم السري الحالي الصحيح authPin للتوثيق)
+async function saveData(data, authPin) {
+  if (IS_LOCAL) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return { ok: true };
+  }
+
+  const res = await fetch(`${API_BASE}/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: authPin, data }),
+  });
+  const result = await res.json();
+  if (res.ok) localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  return { ok: res.ok, error: result.error };
 }
 
 function uid() {
@@ -40,7 +79,7 @@ function clampScore(n) {
   return Math.max(0, Math.min(50, Math.round(n)));
 }
 
-// يضغط أي صورة مرفوعة إلى مربع صغير (JPEG) حتى لا تمتلئ مساحة التخزين المحلي
+// يضغط أي صورة مرفوعة إلى مربع صغير (JPEG) حتى لا تمتلئ مساحة التخزين
 function compressImageFile(file, maxDim = 480, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
