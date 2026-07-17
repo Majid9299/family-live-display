@@ -45,7 +45,6 @@
     font-family:inherit;
   }
   input[type=file]{ color: var(--ink-dim); font-size:13px; }
-  input[type=range]{ width:100%; accent-color: var(--gold); }
   .row{ display:flex; gap:12px; flex-wrap:wrap; }
   .row > div{ flex:1; min-width:160px; }
   button{
@@ -93,7 +92,9 @@
   .thumb-btn input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
   .member .fields{ flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
   .member .score-row{ display:flex; align-items:center; gap:10px; }
-  .member .score-row span{ font-size:13px; color:var(--gold); min-width:26px; text-align:center; }
+  .member .score-row label{ margin:0; white-space:nowrap; }
+  .member .score-row .score-input{ width:80px; flex:0 0 auto; }
+  .member .score-row .btn-save-score{ flex:0 0 auto; }
   .member .actions{ flex:0 0 auto; }
 
   .add-preview{
@@ -301,8 +302,9 @@
         <div class="fields">
           <input type="text" class="name-input" data-id="${m.id}" value="${escapeAttr(m.name)}">
           <div class="score-row">
-            <input type="range" min="0" max="50" class="score-range" data-id="${m.id}" value="${m.score}">
-            <span class="score-val">${m.score}</span>
+            <label for="score-${m.id}">النقاط</label>
+            <input type="number" min="0" max="50" step="1" inputmode="numeric" id="score-${m.id}" class="score-input" data-id="${m.id}" value="${m.score}">
+            <button class="btn-primary btn-save-score" data-id="${m.id}">حفظ</button>
           </div>
         </div>
         <div class="actions">
@@ -318,11 +320,17 @@
         toast(ok ? 'تم الحفظ' : 'فشل الحفظ');
       });
     });
-    list.querySelectorAll('.score-range').forEach(inp => {
-      const span = inp.parentElement.querySelector('.score-val');
-      inp.addEventListener('input', () => { span.textContent = inp.value; });
-      inp.addEventListener('change', async () => {
-        const ok = await updateMember(inp.dataset.id, { score: clampScore(inp.value) });
+    list.querySelectorAll('.score-input').forEach(inp => {
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') inp.closest('.score-row').querySelector('.btn-save-score').click();
+      });
+    });
+    list.querySelectorAll('.btn-save-score').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const inp = document.getElementById('score-' + btn.dataset.id);
+        const val = clampScore(inp.value);
+        inp.value = val;
+        const ok = await updateMember(btn.dataset.id, { score: val });
         toast(ok ? 'تم الحفظ' : 'فشل الحفظ');
       });
     });
